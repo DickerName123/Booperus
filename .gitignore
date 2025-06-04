@@ -1,0 +1,7 @@
+# Build artifacts
+*.o
+libfileutils.a
+test_program
+input.txt
+output.txt
+output2.txt
