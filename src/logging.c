@@ -111,12 +111,19 @@ bool flush_logBuffer(LoggingInfo* info){
         return true;
 
     FILE* fp = fopen(info->log_filename, "r");
+    bool file_exists = true;
+    if(!fp){
+        file_exists = false;
+    }
     if(!fp)
         return false;
 
     size_t capacity = info->counter + 16;
     char** all_lines = malloc(capacity * sizeof(char*));
     if(!all_lines){
+        if(file_exists)
+            fclose(fp);
+
         fclose(fp);
         return false;
     }
@@ -125,6 +132,28 @@ bool flush_logBuffer(LoggingInfo* info){
        maximum permitted length */
     char buf[MAX_LINE_LENGTH + 1];
     size_t total = 0;
+    if(file_exists){
+        while(fgets(buf, sizeof(buf), fp)){
+            if(total >= capacity){
+                capacity *= 2;
+                char** tmp = realloc(all_lines, capacity * sizeof(char*));
+                if(!tmp){
+                    fclose(fp);
+                    for(size_t i=0;i<total;i++)
+                        free(all_lines[i]);
+                    free(all_lines);
+                    return false;
+                }
+                all_lines = tmp;
+            }
+            all_lines[total++] = strdup(buf);
+        }
+        fclose(fp);
+    }else{
+        /* ensure the file will be created when writing later */
+        capacity = info->counter + 16;
+    }
+
     while(fgets(buf, sizeof(buf), fp)){
         if(total >= capacity){
             capacity *= 2;
