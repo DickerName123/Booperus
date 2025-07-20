@@ -115,12 +115,16 @@ bool flush_logBuffer(LoggingInfo* info){
     if(!fp){
         file_exists = false;
     }
+    if(!fp)
+        return false;
 
     size_t capacity = info->counter + 16;
     char** all_lines = malloc(capacity * sizeof(char*));
     if(!all_lines){
         if(file_exists)
             fclose(fp);
+
+        fclose(fp);
         return false;
     }
 
@@ -149,6 +153,23 @@ bool flush_logBuffer(LoggingInfo* info){
         /* ensure the file will be created when writing later */
         capacity = info->counter + 16;
     }
+
+    while(fgets(buf, sizeof(buf), fp)){
+        if(total >= capacity){
+            capacity *= 2;
+            char** tmp = realloc(all_lines, capacity * sizeof(char*));
+            if(!tmp){
+                fclose(fp);
+                for(size_t i=0;i<total;i++)
+                    free(all_lines[i]);
+                free(all_lines);
+                return false;
+            }
+            all_lines = tmp;
+        }
+        all_lines[total++] = strdup(buf);
+    }
+    fclose(fp);
 
     for(int i=0;i<info->counter;i++){
         char line[MAX_LINE_LENGTH + 1];
